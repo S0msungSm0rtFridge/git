@@ -2,16 +2,53 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/sha.h>
+#include <errno.h>
+#include "init.h"
+
+//if linux or windows
+#ifdef _WIN32
+    #include <direct.h>
+    #define MKDIR(path) _mkdir(path)
+#else
+    #include <sys/stat.h>
+    #define MKDIR(path) mkdir(path, 0755)
+#endif
+
+//table of alll git funcs, will prob change 
+typedef int(*command)(int argc, char *argv[]);
+typedef struct {
+    const char *name;
+    command func;
+} Command;
+
+Command commands[] = {
+    {"init", mygit_init},
+    {NULL, NULL}
+};
+
 
 int main(int argc, char *argv[]){
 
-    printf("%d", argc);
+    if(argc < 2){
+        printf("Usage: mygit <command>\n");
+        return 1;
+    }
+
+    //will loop through all commands to find matching, then take argv
+    for(int i = 0; commands[i].name != NULL; i++){
+        if(strcmp(argv[1], commands[i].name) == 0){
+            return(commands[i].func(argc, argv));
+        }
+    }
+
+    printf("unknown command");
+    return 1;
 }
 
 
-int mygit_init(){
+int mygit_init(int argc, char *argv[]){
 
-    if(mkdir(".mygit", 0755) && errno != EEXIST){
+    if(MKDIR(".mygit") && errno != EEXIST){
         perror("mkdir .mygit");
         return 1;
     }
@@ -25,7 +62,7 @@ int mygit_init(){
     };
 
     for (int i = 0; i < 4; i++) {
-        if (mkdir(dirs[i], 0755) && errno != EEXIST) {
+        if (MKDIR(dirs[i]) && errno != EEXIST) {
             fprintf(stderr, "Failed to create directory: %s\n", dirs[i]);
             return 1;
         }
