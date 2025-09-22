@@ -4,6 +4,8 @@
 #include <openssl/sha.h>
 #include <errno.h>
 #include "init.h"
+#include <unistd.h> 
+#include "check_repo.h"
 
 //if linux or windows
 #ifdef _WIN32
@@ -29,22 +31,43 @@ Command commands[] = {
 
 int main(int argc, char *argv[]){
 
-    if(argc < 2){
-        printf("Usage: mygit <command>\n");
+    // if(argc < 2){
+    //     printf("Usage: mygit <command>\n");
+    //     return 1;
+    // }
+
+    // //will loop through all commands to find matching, then take argv
+    // for(int i = 0; commands[i].name != NULL; i++){
+    //     if(strcmp(argv[1], commands[i].name) == 0){
+    //         return(commands[i].func(argc, argv));
+    //     }
+    // }
+
+    // printf("unknown command");
+    // return 1;
+    
+    char cwd[PATH_MAX];
+
+    // get current working directory
+    if (!getcwd(cwd, sizeof(cwd))) {
+        perror("getcwd");
         return 1;
     }
 
-    //will loop through all commands to find matching, then take argv
-    for(int i = 0; commands[i].name != NULL; i++){
-        if(strcmp(argv[1], commands[i].name) == 0){
-            return(commands[i].func(argc, argv));
-        }
+    printf("Current directory: %s\n", cwd);
+
+    // find .mygit root
+    char *root = find_root_repo(cwd);
+    if (root) {
+        printf("Repo root found at: %s\n", root);
+        free(root);  // always free strdup-ed memory
+    } else {
+        printf("Not inside a mygit repository.\n");
     }
 
-    printf("unknown command");
-    return 1;
-}
+    return 0;
 
+}
 
 int mygit_init(int argc, char *argv[]){
 
@@ -86,4 +109,9 @@ int mygit_init(int argc, char *argv[]){
 
     printf("Initialized empty mygit repository in .mygit/\n");
     return 0;
+}
+
+int hash_file(int argc, char *argv[]){
+
+    return 1;
 }
