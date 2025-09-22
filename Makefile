@@ -6,7 +6,7 @@ CFLAGS = -Wall -Wextra -g
 TARGET = mygit
 
 # source files
-SRCS = main.c check_repo.c 
+SRCS = main.c git_functions/check_repo.c 
 OBJS = $(SRCS:.c=.o)
 
 # default rule
