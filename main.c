@@ -6,6 +6,7 @@
 #include "./headers/init.h"
 #include <unistd.h> 
 #include "./headers/check_repo.h"
+#include "./headers/hash_blob.h"
 
 //if linux or windows
 #ifdef _WIN32
@@ -31,20 +32,20 @@ Command commands[] = {
 
 int main(int argc, char *argv[]){
 
-    if(argc < 2){
-        printf("Usage: mygit <command>\n");
-        return 1;
-    }
+    // if(argc < 2){
+    //     printf("Usage: mygit <command>\n");
+    //     return 1;
+    // }
 
-    //will loop through all commands to find matching, then take argv
-    for(int i = 0; commands[i].name != NULL; i++){
-        if(strcmp(argv[1], commands[i].name) == 0){
-            return(commands[i].func(argc, argv));
-        }
-    }
+    // //will loop through all commands to find matching, then take argv
+    // for(int i = 0; commands[i].name != NULL; i++){
+    //     if(strcmp(argv[1], commands[i].name) == 0){
+    //         return(commands[i].func(argc, argv));
+    //     }
+    // }
 
-    printf("unknown command");
-    return 1;
+    // printf("unknown command");
+    // return 1;
     
     // char cwd[PATH_MAX];
 
@@ -66,6 +67,15 @@ int main(int argc, char *argv[]){
     // }
 
     // return 0;
+
+    char *hash = blob_file("main.c");
+    if (hash) {
+        printf("Blob written with hash: %s\n", hash);
+        free(hash);
+    } else {
+        printf("Failed to create blob\n");
+    }
+    return 0;
 
 }
 
@@ -112,8 +122,33 @@ int mygit_init(int argc, char *argv[]){
     return 0;
 }
 
-int hash_file(int argc, char *argv[]){
+unsigned char *read_blob(const char *path, size_t *out_size) {
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        perror("fopen");
+        return NULL;
+    }
 
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    return 1;
+    unsigned char *buf = malloc(size);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+
+    size_t n = fread(buf, 1, size, f);
+    fclose(f);
+
+    if (n != size) {
+        free(buf);
+        return NULL;
+    }
+
+    if (out_size)
+        *out_size = size;
+
+    return buf;
 }
