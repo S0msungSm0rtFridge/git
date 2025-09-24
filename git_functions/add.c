@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <openssl/sha.h>
 
 #ifdef _WIN32
   #include <direct.h>
   #define mkdir(path, mode) _mkdir(path)   
 #else
-  #include <sys/stat.h>
   #include <sys/types.h>
 #endif
 //will returns a hex string of SHA-1 to name the file beiong made blobl
@@ -46,8 +46,11 @@
 //     hex[SHA_DIGEST_LENGTH * 2] = '\0';
 //     return hex;
 // }
+char *blob(const char *path);
+int add(const char *path);
+int mygit_add(int argc, char *argv[]);
 
-char *blob_file(const char *path){
+char *blob(const char *path){
     FILE *f = fopen(path, "rb");
     if(!f){
         return NULL;
@@ -101,4 +104,29 @@ char *blob_file(const char *path){
     return hex;
 
 
+}
+
+
+int add(const char *path){
+    printf("change");
+    char *hashed_file = blob(path);
+    FILE *f = fopen(".mygit/index", "a");
+    if(!f){
+        printf("fix init ig");
+        free(hashed_file);
+        return NULL;
+    }
+
+    fprintf(f, "%s %s", hashed_file, path);
+    fclose(f);
+    free(hashed_file);
+    return 0;
+}
+
+int mygit_add(int argc, char *argv[]){
+    if(argc < 3){
+        return 1;
+    }
+
+    return add(argv[2]);
 }

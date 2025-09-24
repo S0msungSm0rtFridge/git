@@ -6,7 +6,7 @@
 #include "./headers/init.h"
 #include <unistd.h> 
 #include "./headers/check_repo.h"
-#include "./headers/hash_blob.h"
+#include"./headers/add.h"
 
 //if linux or windows
 #ifdef _WIN32
@@ -26,26 +26,27 @@ typedef struct {
 
 Command commands[] = {
     {"init", mygit_init},
+    {"add", mygit_add},
     {NULL, NULL}
 };
 
 
 int main(int argc, char *argv[]){
 
-    // if(argc < 2){
-    //     printf("Usage: mygit <command>\n");
-    //     return 1;
-    // }
+    if(argc < 2){
+        printf("Usage: mygit <command>\n");
+        return 1;
+    }
 
-    // //will loop through all commands to find matching, then take argv
-    // for(int i = 0; commands[i].name != NULL; i++){
-    //     if(strcmp(argv[1], commands[i].name) == 0){
-    //         return(commands[i].func(argc, argv));
-    //     }
-    // }
+    //will loop through all commands to find matching, then take argv
+    for(int i = 0; commands[i].name != NULL; i++){
+        if(strcmp(argv[1], commands[i].name) == 0){
+            return(commands[i].func(argc, argv));
+        }
+    }
 
-    // printf("unknown command");
-    // return 1;
+    printf("unknown command");
+    return 1;
     
     // char cwd[PATH_MAX];
 
@@ -92,10 +93,9 @@ int mygit_init(int argc, char *argv[]){
         ".mygit/refs",
         ".mygit/refs/heads",
         ".mygit/refs/tags",
-        ".mygit/index"
     };
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
         if (MKDIR(dirs[i]) && errno != EEXIST) {
             fprintf(stderr, "Failed to create directory: %s\n", dirs[i]);
             return 1;
@@ -110,6 +110,14 @@ int mygit_init(int argc, char *argv[]){
     }
     fprintf(head, "ref: refs/heads/main\n");
     fclose(head);
+
+    //creates a nindex
+    FILE *index = fopen(".mygit/index", "w");
+    if (!index) {
+        perror("index failed");
+        return 1;
+    }
+    fclose(index);
 
     //creates git configs
     FILE *config = fopen(".mygit/config", "w");
