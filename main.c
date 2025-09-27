@@ -7,6 +7,7 @@
 #include <unistd.h> 
 #include "./headers/check_repo.h"
 #include"./headers/add.h"
+#include"./headers/commit.h"
 
 //if linux or windows
 #ifdef _WIN32
@@ -27,6 +28,7 @@ typedef struct {
 Command commands[] = {
     {"init", mygit_init},
     {"add", mygit_add},
+    {"commit", mygit_commit},
     {NULL, NULL}
 };
 
