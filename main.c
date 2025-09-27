@@ -69,13 +69,7 @@ int main(int argc, char *argv[]){
 
     // return 0;
 
-    char *hash = blob_file("main.c");
-    if (hash) {
-        printf("Blob written with hash: %s\n", hash);
-        free(hash);
-    } else {
-        printf("Failed to create blob\n");
-    }
+
     return 0;
 
 }

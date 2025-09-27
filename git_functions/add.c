@@ -47,7 +47,7 @@
 //     return hex;
 // }
 char *blob(const char *path);
-int add(const char *path);
+int add(int argc, char *argv[]);
 int mygit_add(int argc, char *argv[]);
 
 char *blob(const char *path){
@@ -106,27 +106,66 @@ char *blob(const char *path){
 
 }
 
+//need to make sure this works from any path in git repo, use function in check_repo, will also add . in top level
+int add(int argc, char *argv[]){
 
-int add(const char *path){
-    printf("change");
-    char *hashed_file = blob(path);
-    FILE *f = fopen(".mygit/index", "a");
-    if(!f){
-        printf("fix init ig");
+    for (int i = 2; i < argc; i++) {
+        char *path = argv[i];
+        char *hashed_file = blob(path);
+
+        if(hashed_file == NULL){
+            printf("the path %s does not exist", path);
+            continue;
+        }
+        FILE *f = fopen(".mygit/index", "r");
+        FILE *tmp = fopen(".mygit/index.tmp", "w");
+        if(!f){
+            printf("fix init ig");
+            free(hashed_file);
+            return 1;
+        }
+        char line[1024];
+        while(fgets(line, sizeof(line), f) != NULL){
+
+            //makes sure index is not empty
+            line[strcspn(line, "\n")] = 0;
+            if (line[0] == '\0') {
+                break;
+            }
+
+            char *space = strchr(line, ' ');
+            char *file_name = space + 1;
+            file_name[strcspn(file_name, "\n")] = 0;        
+
+            if(strcmp(file_name, path) == 0){
+                continue;
+            }
+
+            fputs(line, tmp);
+            fputc('\n', tmp);
+        }
+
+        fprintf(tmp, "%s %s\n", hashed_file, path);
+        fclose(tmp);
+        fclose(f);
         free(hashed_file);
-        return NULL;
+        
+        if (remove(".mygit/index") != 0) {
+        }
+        if (rename(".mygit/index.tmp", ".mygit/index") != 0) {
+            perror("rename");
+            return 1;
+        }
     }
 
-    fprintf(f, "%s %s", hashed_file, path);
-    fclose(f);
-    free(hashed_file);
     return 0;
 }
 
 int mygit_add(int argc, char *argv[]){
     if(argc < 3){
+        printf("need file path");
         return 1;
     }
 
-    return add(argv[2]);
+    return add(argc, argv);
 }
