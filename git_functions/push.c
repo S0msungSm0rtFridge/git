@@ -18,7 +18,7 @@ int copy_blob(const char *src, const char *dest);
 
 
 int push_object(const char *hash, const char *dir){
-    printf("gets to object");
+    printf("gets to object\n");
 
     //get the path of the object
     char path[1024];
@@ -28,11 +28,13 @@ int push_object(const char *hash, const char *dir){
     //read the entire file
     FILE *f = fopen(path, "rb");
     if(!f){
+        printf("fails at opening file object \n");
         return 1;
     }
 
     char buffer[4096];
     size_t n = fread(buffer, 1, sizeof(buffer), f);
+    buffer[n] = '\0';
     fclose(f);
     printf("%s\n", buffer);
 
@@ -87,8 +89,9 @@ int push_tree(const char *hash, const char *dir){
 
         // mode + space
         sscanf((char*)buffer + pos, "%s", mode);
+        printf("mode : %s\n", mode);
         char *fname = strchr((char*)buffer + pos, ' ') + 1;
-
+        printf("fnane : %s\n", fname);
         size_t fname_len = strlen(fname);
         pos += strlen(mode) + 1 + fname_len + 1; 
 
@@ -99,7 +102,7 @@ int push_tree(const char *hash, const char *dir){
         for (int i = 0; i < 20; i++) {
             sprintf(objHash + i*2, "%02x", hashBin[i]);
         }
-        objHash[40] = '\0';
+        objHash[41] = '\0';
         printf("%s, %s\n", objHash, dir);
         push_object(objHash, dir);
     }
