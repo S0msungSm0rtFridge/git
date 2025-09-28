@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <libgen.h>
+#include <errno.h>
 
 #ifdef _WIN32
   #include <direct.h>
@@ -17,13 +19,32 @@ int push_tree(const char *hash, const char *dir);
 int copy_blob(const char *src, const char *dest);
 
 
+int checkDir(const char *path){
+    char tmp[1024];
+    strncpy(tmp, path, sizeof(tmp));
+    tmp[sizeof(tmp) - 1] = '\0';
+
+    char *p = tmp;
+    while(*p){
+        if(*p == '/' && p != tmp){
+            *p = '\0';
+            mkdir(tmp, 0755);
+            *p = '/';
+        }
+        p++;
+    }
+
+    mkdir(tmp, 0755);
+    return 0;
+}
+
 int push_object(const char *hash, const char *dir){
     printf("gets to object\n");
 
     //get the path of the object
     char path[1024];
     snprintf(path, sizeof(path), ".mygit/objects/%.2s/%s", hash, hash + 2);
-    printf("%s\n", path);
+    printf("path: %s\n", path);
 
     //read the entire file
     FILE *f = fopen(path, "rb");
@@ -34,81 +55,100 @@ int push_object(const char *hash, const char *dir){
 
     char buffer[4096];
     size_t n = fread(buffer, 1, sizeof(buffer), f);
-    buffer[n] = '\0';
+    buffer[n - 1] = '\0';
     fclose(f);
-    printf("%s\n", buffer);
 
-    printf("before token\n");
-    char *copyString = strdup(buffer);
-    char *token = strtok(copyString, " ");
-    printf("after token, %s\n", token);
+    printf("path: %s\n", path);
+    char type[16];
+    int size = 0;
+    sscanf(buffer, "%15s %d", type, &size);
 
+    printf("path: %s\n", path);
     //if commit object, go commit, else tree, go tree. else blobl
-    if(strcmp(token, "commit") == 0){
+    if(strcmp(type, "commit") == 0){
         return push_commit(hash, dir);
     }
-    else if(strcmp(token, "tree") == 0){
+    else if(strcmp(type, "tree") == 0){
         return push_tree(hash, dir);
     } 
     else{
         printf("in copy\n");
+        printf("path: %s\n", path);
         char outDir[128], outFile[256];
-        snprintf(outDir, sizeof(outDir), "%s/%.2ss", dir, hash);
-        snprintf(outFile, sizeof(outFile), "%s/%.2ss/%s", dir, hash, hash+2);
+        snprintf(outDir, sizeof(outDir), "%s/%.2s", dir, hash);
+        mkdir(outDir, 0775);
+        snprintf(outFile, sizeof(outFile), "%s/%.2s/%s", dir, hash, hash+2);
+        printf("path: %s\n", path);
         return copy_blob(path, outFile);
     }
-    free(copyString);
     return 0;
 }
 
-int push_tree(const char *hash, const char *dir){
-    printf("gets to tree");
-    //get the path of the object
+int push_tree(const char *hash, const char *dir) {
+    printf("gets to tree %s\n", hash);
+
+    // get the path of the object
     char path[1024];
     snprintf(path, sizeof(path), ".mygit/objects/%.2s/%s", hash, hash + 2);
-    printf("%s\n", path);
 
-
-    //read the entire file
     FILE *f = fopen(path, "rb");
-    if(!f){
-        printf("failed in poening file\n");
+    if (!f) {
+        fprintf(stderr, "failed opening tree object\n");
         return 1;
     }
 
-    char buffer[4096];
-    size_t n = fread(buffer, 1, sizeof(buffer), f);
+    // read file
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    rewind(f);
+
+    unsigned char *buffer = malloc(size);
+    fread(buffer, 1, size, f);
     fclose(f);
-    printf("buffer %s\n", buffer);
 
-    // wlk tree"100644 filename\0<20-byte hash>"
-    size_t pos = 0;
-    while (pos < n) {
-        char mode[7], filename[256], objHash[41];
-        unsigned char hashBin[20];
+    // sjipp header
+    unsigned char *pos = buffer;
+    pos = (unsigned char *)strchr((char *)buffer, '\0') + 1;
 
-        // mode + space
-        sscanf((char*)buffer + pos, "%s", mode);
-        printf("mode : %s\n", mode);
-        char *fname = strchr((char*)buffer + pos, ' ') + 1;
-        printf("fnane : %s\n", fname);
-        size_t fname_len = strlen(fname);
-        pos += strlen(mode) + 1 + fname_len + 1; 
+    while (pos < buffer + size) {
+        // ended by /0
+        char mode[7];
+        char filename[256];
 
-        memcpy(hashBin, buffer + pos, 20);
+        //get moe
+        char *sp = strchr((char *)pos, ' ');
+        int mode_len = sp - (char *)pos;
+        memcpy(mode, pos, mode_len);
+        mode[mode_len] = '\0';
+        pos = (unsigned char *)sp + 1;
+
+        // get name
+        char *nul = (char *)pos;
+        while (*nul != '\0') nul++;
+        int fname_len = nul - (char *)pos;
+        memcpy(filename, pos, fname_len);
+        filename[fname_len] = '\0';
+        pos = (unsigned char *)nul + 1;
+
+        //skpi 20 for hash
+        unsigned char hash_bin[20];
+        memcpy(hash_bin, pos, 20);
         pos += 20;
 
-        // turn to string
+        // convert to 40 string
+        char objHash[41];
         for (int i = 0; i < 20; i++) {
-            sprintf(objHash + i*2, "%02x", hashBin[i]);
+            sprintf(objHash + i*2, "%02x", hash_bin[i]);
         }
-        objHash[41] = '\0';
-        printf("%s, %s\n", objHash, dir);
+        objHash[40] = '\0';
+
+        printf("entry: %s %s %s\n", mode, filename, objHash);
+
         push_object(objHash, dir);
     }
 
+    free(buffer);
     return 0;
-
 }
 
 int push_commit(const char *hash, const char *dir){
@@ -168,20 +208,30 @@ int push_commit(const char *hash, const char *dir){
 
 int copy_blob(const char *src, const char *dest){
 
+
+    char tmp[1024];
+    strncpy(tmp, dest, sizeof(tmp));
+    tmp[sizeof(tmp)-1] = '\0';
+    char *dir = dirname(tmp);
+    checkDir(dir);
+
+    printf("%s, %s\n", src, dest);
     FILE *s = fopen(src, "rb");
     if(!s){
+        printf("failed to read in file");
         return 1;
     }
 
     FILE *out = fopen(dest, "w");
     if(!out){
+        printf("failed to make out file");
         return 1;
     }
 
     char buffer[4096];
     size_t n; 
     while((n = fread(buffer, 1, sizeof(buffer), s)) > 0){
-        fwrite(buffer, 1, sizeof(buffer), out);
+        fwrite(buffer, 1, n, out);
     }
     
     fclose(s);

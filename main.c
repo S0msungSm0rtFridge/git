@@ -92,6 +92,8 @@ int mygit_init(int argc, char *argv[]){
         ".mygit/refs",
         ".mygit/refs/heads",
         ".mygit/refs/tags",
+        ".mygit/remote",
+        ".mygit/remote/objects",
     };
 
     for (int i = 0; i < 4; i++) {
