@@ -7,7 +7,7 @@ LDFLAGS = -lcrypto
 TARGET = mygit
 
 # source files
-SRCS = main.c helpers/check_repo.c git_functions/add.c git_functions/commit.c
+SRCS = main.c helpers/check_repo.c git_functions/add.c git_functions/commit.c git_functions/push.c
 OBJS = $(SRCS:.c=.o)
 
 # default rule

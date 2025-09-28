@@ -8,6 +8,8 @@
 #include "./headers/check_repo.h"
 #include"./headers/add.h"
 #include"./headers/commit.h"
+#include"./headers/push.h"
+
 
 //if linux or windows
 #ifdef _WIN32
@@ -29,6 +31,7 @@ Command commands[] = {
     {"init", mygit_init},
     {"add", mygit_add},
     {"commit", mygit_commit},
+    {"push", mygit_push},
     {NULL, NULL}
 };
 
